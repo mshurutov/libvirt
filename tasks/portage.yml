@@ -1,0 +1,15 @@
+---
+
+- name: install LXD on Gentoo Linux
+  portage:
+    package: app-containers/lxd
+    state: present
+  tags: install_lxd
+  notify:
+    - enable lxd
+
+- name: start lxd service after installation
+  service:
+    name: lxd
+    state: started
+  tags: install_lxd,start_lxd

@@ -1,0 +1,45 @@
+---
+
+- name: install lxd package
+  include_tasks: "{{ ansible_pkg_mgr }}.yml"
+
+- name: init LXD service
+  when: lxd_init_force is defined
+  block:
+    - name: copy template into variable
+      set_fact:
+        init_config: "{{ lookup('template', 'lxd-init.yml.j2') }}"
+    - debug:
+        msg: "{{ init_config | to_yaml }}"
+    - name: execute lxd init
+      ansible.builtin.command: lxd init --preseed <
+      args:
+        stdin: "{{ init_config }}"
+    - name: create LVM default storage pool
+      ansible.builtin.command: "lxc storage create default lvm source={{ VG_NAME }} lvm.thinpool_name={{ LXD_LVM_THINPOOL }} lvm.vg.force_reuse=yes"
+  tags: lxd_init
+
+- name: create and start any containers
+  community.general.lxd_container:
+    name: "{{ item.name }}"
+    state: "{{ item.state }}"
+    source:
+      type: image
+      server: "{{ item.server }}"
+      alias: "{{ item.alias }}"
+      architecture: "{{ item.architecture }}"
+    devices:
+      root:
+        path: /
+        type: "{{ item.disk_type }}"
+        size: "{{ item.disk_size }}"
+        pool: "{{ item.storage_pool }}"
+      eth0:
+        type: "{{ item.netdevice_type }}"
+        nictype: "{{ item.nictype }}"
+        parent: "{{ item.network }}"
+        ipv4.address: "{{ item.ipv4address }}"
+    profiles: "{{ item.profile }}"
+    wait_for_ipv4_addresses: "{{ item.wait_for_ipv4_addresses }}"
+    timeout: "{{ item.timeout }}"
+  loop: "{{ LXD_CNTNRS }}"

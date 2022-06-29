@@ -1,0 +1,28 @@
+config: {}
+networks:
+{% if lxd_net_use == 'bridge' %}
+- name: "{{ lxd_net_bridge_name }}"
+  type: "{{ lxd_net_use }}"
+  config:
+    ipv4.address: {{ lxd_net_bridge_ipv4_address }}
+{% if lxd_net_dhcp_range is defined %}
+    ipv4.dhcp: "true"
+    ipv4.dhcp.ranges: "{{ lxd_net_dhcp_range }}"
+{% endif %}
+    ipv4.nat: "{{ lxd_net_nat }}"
+{% endif %}
+profiles:
+- config: {}
+  name: default
+  description: "Default LXD profile"
+  devices:
+    root:
+      path: /
+      pool: default
+      type: disk
+    {{ ansible_default_ipv4.interface }}:
+      name: {{ ansible_default_ipv4.interface }}
+      nictype: "{{ 'bridged' if lxd_net_use == 'bridge' }}"
+      parent: "{{ lxd_net_parent }}"
+      type: nic
+

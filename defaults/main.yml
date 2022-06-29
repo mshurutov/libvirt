@@ -1,0 +1,6 @@
+lxd_net_use: "bridge"
+lxd_net_bridge_name: "lxdbr0"
+lxd_net_bridge_ipv4_address: "192.168.254.1/24"
+lxd_net_dhcp_range: "192.168.254.2-192.168.254.254"
+lxd_net_nat: true
+lxd_net_parent: "{{ lxd_net_bridge_name }}"
