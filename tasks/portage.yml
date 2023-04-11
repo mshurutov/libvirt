@@ -2,9 +2,9 @@
 
 - name: install LXD on Gentoo Linux
   portage:
-    package: app-containers/lxd
+    package: "{{ libvirt_packages }}"
     state: present
-  tags: install_lxd
+  tags: lxd_install
   notify:
     - enable lxd
 
@@ -12,4 +12,4 @@
   service:
     name: lxd
     state: started
-  tags: install_lxd,start_lxd
+  tags: lxd_install,lxd_start

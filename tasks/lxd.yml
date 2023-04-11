@@ -1,8 +1,5 @@
 ---
 
-- name: install lxd package
-  include_tasks: "{{ ansible_pkg_mgr }}.yml"
-
 - name: init LXD service
   when: lxd_init_force is defined
   block:
