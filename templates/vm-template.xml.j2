@@ -1,0 +1,115 @@
+{# Template for create virtual machine by libvirt #}
+{# Macros #}
+{%+ macro attrs_list(elem) %}
+<elem.name{% if elem.attrs is defined %}{% for attr in elem.attrs %} {{ attr.name}}='{{ attr.value }}'{% endfor %}{% endif %}{% if not elem.value is defined and not elem.parameters is defined %} /{% endif %}>
+{% endmacro %}
+<domain type='{{ vm.type }}'{% if vm.vmid is defined %} id='{{ vm.vmid }}'{% endif %}>
+{# BEGIN General parameters
+	Docs: https://libvirt.org/formatdomain.html#general-metadata
+#}
+{% for genparam in vm.general %}
+{% if genparam.name != 'metadata' %}
+  <{{ genparam.name }}>{{ genparam.value }}</{{ genparam.name }}>
+{% else %}
+  <{{ genparam.name }}>
+{% for md in genparam.value %}
+    {{ genparam.md }}
+{% endfor %}
+  </{{ genparam.name }}>
+{% endif %}
+{% endfor %}
+{# END General parameters #}
+{# BEGIN os booting parameters
+	Docs: https://libvirt.org/formatdomain.html#operating-system-booting
+#}
+  {{ attrs_list(vm.osboot.head) }}
+    {{ attrs_list(vm.osboot.type) }}{{ vm.osboot.type.value }}</type>
+    {%- for obl in vm.osboot.parameters recursive -%}
+    {{ attrs_list(obl) }}{% if obl.value is defined %}{{ obl.value }}</{{ obl.name }}>
+	{%- if obl.parameters is defined -%}
+      {{ loop(obl.parameters) }}
+    </{{ obl.name }}>
+	{%- endif -%}
+    {%- endfor -%}
+  </os>
+{# END os booting parameters #}
+{# BEGIN SMBIOS System Information parameters
+	Docs: https://libvirt.org/formatdomain.html#smbios-system-information
+#}
+{% if vm.sysinfo is defined %}
+  {{ attrs_list(vm.sysinfo.head) }}
+    {%- for prm in vm.sysinfo.parameters -%}
+    <prm.name>
+      {%- for opt in prm.parameters -%}
+	  <entry name='{{ opt.name }}'>{{ opt.value }}</entry>
+	  {% endfor %}
+    </prm.name>
+    {%- endfor -%}
+  </sysinfo>
+{% endif %}
+{# END SMBIOS System Information parameters #}
+{# BEGIN CPU and CPU Tuning parameters
+	Docs: https://libvirt.org/formatdomain.html#cpu-allocation
+	Docs: https://libvirt.org/formatdomain.html#cpu-tuning
+#}
+{% if vm.cpu is defined %}
+{% for cpupart in vm.cpu %}
+  {{ attrs_list(cpupart) }}
+  {%- if cpupart.parameters is defined -%}
+  {%- for cp in cpupart.parameters recursive -%}
+    {{ attrs_list(cp) }}
+	{%- if cp.parameters is defined -%}
+	  {{ loop(cp.parameters) }}
+	{% endif %}
+	</{{ cp.name }}>
+  {% endfor %}
+  </{{ cpupart.name }}>
+  {% endif %}
+{% endfor %}
+{% endif %}
+{# END CPU and CPU Tuning parameters #}
+{# BEGIN IOThreads Allocation parameters
+	Docs: https://libvirt.org/formatdomain.html#iothreads-allocation
+#}
+{% if is defined %}
+{% for in %}
+{% endfor %}
+{% endif %}
+{# END IOThreads Allocation parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+{# BEGIN parameters #}
+{# END parameters #}
+</domain>

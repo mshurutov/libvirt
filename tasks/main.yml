@@ -1,0 +1,17 @@
+---
+
+- name: install package for virtualisation
+  include_tasks: "{{ ansible_pkg_mgr }}.yml"
+  tags: libvirt_install
+
+- name: create VMs
+  community.libvirt.virt:
+    command: define
+    xml: "{{ lookup('template', 'vm-template.xml.j2') }}"
+    autostart: "{{ vm.autostart | default(false) }}" 
+    state: "{{ vm.state | default(shutdown) }}"
+  loop: "{{ libvirt_vms }}"
+  loop_control:
+    loop_var: vm
+  tags: libvirt_define
+
