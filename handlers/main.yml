@@ -29,4 +29,3 @@
   service:
     name: lxd
     state: stopped
-  

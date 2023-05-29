@@ -2,6 +2,6 @@
 - name: Converge
   hosts: all
   tasks:
-    - name: "Include lxd"
+    - name: "Include libvirt"
       include_role:
-        name: "lxd"
+        name: "libvirt"
