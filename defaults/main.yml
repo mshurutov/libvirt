@@ -1,6 +1,37 @@
-lxd_net_use: "bridge"
-lxd_net_bridge_name: "lxdbr0"
-lxd_net_bridge_ipv4_address: "192.168.254.1/24"
-lxd_net_dhcp_range: "192.168.254.2-192.168.254.254"
-lxd_net_nat: true
-lxd_net_parent: "{{ lxd_net_bridge_name }}"
+---
+
+# Default values for libvirt role
+# Common libvirt variables: any directory
+libvirt_templates_dir: "{{ role_path }}/templates"
+libvirt_vars_dir: "{{ role_path }}/vars"
+
+# Variables for LXD part
+lxd_port_listen: 8443
+lxd_image_default_store: "images"
+lxd_config_defaults:
+  core.https_address: "{{ common_ip4_default }}:{{ lxd_port_listen }}"
+lxd_storage_pools_defaults:
+  - name: "default"
+    driver: "dir"
+    config:
+      source: "/var/lib/lxd/storage-pools"
+lxd_networks_defaults:
+  - name: "lxd_network"
+    params:
+      - type: "bridge"
+      - ipv4.address: "auto"
+      - ipv6.address: "none"
+#lxd_projects_defaults:
+#  - name: "default"
+#    devices:
+#      root:
+#        path: "/"
+#        pool: "default"
+#        type: "disk"
+#lxd_profiles_defaults:
+#  - name: "default"
+#    devices:
+#      root:
+#        path: "/"
+#        pool: "default"
+#        type: "disk"

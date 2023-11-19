@@ -1,42 +1,153 @@
 ---
 
+- name: set any variables
+  ansible.builtin.include_vars: "{{ libvirt_vars_dir }}/lxd.yml"
+  tags: lxd_init,lxd_config,lxd_storage,lxd_network,lxd_profiles,lxd_projects,lxd_vms
+
+#- name: show any variables
+#  debug:
+#    msg:
+#    - "config: {{ lxd_config }}"
+#    - "storage pools: {{ lxd_storage_pools }}"
+#    - "networks: {{ lxd_networks }}"
+#    - "profiles: {{ lxd_profiles }}"
+#    - "projects: {{ lxd_projects }}"
+
 - name: init LXD service
-  when: lxd_init_force is defined
   block:
-    - name: copy template into variable
-      set_fact:
-        init_config: "{{ lookup('template', 'lxd-init.yml.j2') }}"
-    - debug:
-        msg: "{{ init_config | to_yaml }}"
     - name: execute lxd init
-      ansible.builtin.command: lxd init --preseed <
-      args:
-        stdin: "{{ init_config }}"
-    - name: create LVM default storage pool
-      ansible.builtin.command: "lxc storage create default lvm source={{ VG_NAME }} lvm.thinpool_name={{ LXD_LVM_THINPOOL }} lvm.vg.force_reuse=yes"
+      ansible.builtin.command: lxd init --minimal
+    - name: create LXD storage pools
+      ansible.builtin.command: "lxc storage create {{ item.pool_name }} {{ item.pool_type }} {{ item.pool_options }}"
+      when: lxd_stotage_pools is defined
+      loop: "{{ lxd_stotage_pools }}"
+    - name: create LXD networks
+      ansible.builtin.command: "lxc storage create {{ item.pool_name }} {{ item.pool_type }} {{ item.pool_options }}"
+      when: lxd_stotage_pools is defined
+      loop: "{{ lxd_stotage_pools }}"
+  when: lxd_init_force is defined and lxd_init_force | bool
   tags: lxd_init
+
+- name: get lxc config
+  ansible.builtin.command: lxc config show --force-local
+  register: lxc_config_set
+  check_mode: off
+  tags: lxd_config
+- name: get lxc config from output
+  ansible.builtin.set_fact:
+    lxc_config_current: "{{ lxc_config_set.stdout | from_yaml }}"
+  tags: lxd_config
+
+- name: set new lxd config parameters
+  ansible.builtin.command: "lxc config set {{ item.key }}={{ item.value }}"
+  loop: "{{ lookup('ansible.builtin.dict', lxd_config , wantlist=True) }}"
+  when: item.value != 'unset'
+  tags: lxd_config
+
+- name: unset lxd config parameters
+  ansible.builtin.command: "lxc config unset {{ item.key }}"
+  loop: "{{ lookup('ansible.builtin.dict', lxd_config , wantlist=True) }}"
+  when: item.value == 'unset'
+  tags: lxd_config
+
+- name: get storage pools list into raw variable
+  ansible.builtin.command: "lxc storage list --force-local -f yaml"
+  register: lxc_storage_pools_list_raw
+  check_mode: off
+  tags: lxd_storage
+- name: get storage pools list from output of raw variable
+  ansible.builtin.set_fact:
+    lxc_storage_pools_list: "{{ lxc_storage_pools_list_raw.stdout | from_yaml }}"
+  tags: lxd_storage
+
+- name: get network list
+  ansible.builtin.command: "lxc network list --force-local -f yaml"
+  register: lxc_network_list_raw
+  check_mode: off
+  tags: lxd_network
+- name: get network from output of raw variable
+  ansible.builtin.set_fact:
+    lxc_network_list: "{{ lxc_network_list_raw.stdout | from_yaml }}"
+  check_mode: off
+  tags: lxd_network
+
+- name: show lxc_storage_pools_list variable
+  debug:
+    msg:
+#    - "storage pool: {{ lxc_storage_pools_list }}"
+    - "network: {{ lxc_network_list | to_yaml }}"
+  tags: lxd_network,lxd_storage
+
+#- name: create managed network
+#  ansible.builtin.command: "lxc network create {{ item.name }}"
+#  loop: "{{ lxd_networks }}"
+#  when: not item.name in lxc_network_list_raw.stdout
+#  tags: lxd_network
+#
+#- name: set network parameters
+#  ansible.builtin.command: "lxc network set {{ item.0.name }} {{ item.1.key }}={{ item.1.value }}"
+#  loop: "{{ lxd_networks | subelements('params') }}"
+#  when: item.1.value != 'unset'
+#  tags: lxd_network
+ 
+- name: set lxd profiles
+  community.general.lxd_profile:
+    client_cert: "{{ item.client_cert | default(omit) }}"
+    client_key: "{{ item.client_key | default(omit) }}"
+    config: "{{ item.config | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    devices: "{{ item.devices | default(omit) }}"
+    merge_profile: "{{ item.merge_profile | default(omit) }}"
+    name: "{{ item.name }}"
+    new_name: "{{ item.new_name | default(omit) }}"
+    project: "{{ item.project | default(omit) }}"
+    snap_url: "{{ item.snap_url | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+    trust_password: "{{ item.trust_password | default(omit) }}"
+    url: "{{ item.url | default(omit) }}"
+  when: lxd_profiles is defined
+  loop: "{{ lxd_profiles }}"
+  tags: lxd_profiles
+
+- name: set lxd projects
+  community.general.lxd_project:
+    client_cert: "{{ item.client_cert | default(omit) }}"
+    client_key: "{{ item.client_key | default(omit) }}"
+    config: "{{ item.config | default(omit) }}"
+    description: "{{ item.description | default(omit) }}"
+    merge_profile: "{{ item.merge_profile | default(omit) }}"
+    name: "{{ item.name }}"
+    new_name: "{{ item.new_name | default(omit) }}"
+    snap_url: "{{ item.snap_url | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+    trust_password: "{{ item.trust_password | default(omit) }}"
+    url: "{{ item.url | default(omit) }}"
+  when: lxd_projects is defined
+  loop: "{{ lxd_projects }}"
+  tags: lxd_projects
 
 - name: create and start any containers
   community.general.lxd_container:
+    architecture: "{{ item.architecture | default('x86_64') }}"
+    client_cert: "{{ item.client_cert | default(omit) }}"
+    client_key: "{{ item.client_key | default(omit) }}"
+    config: "{{ item.config | default(omit) }}"
+    devices: "{{ item.devices | default(omit) }}"
+    ephemeral: "{{ item.ephemeral | default(omit) }}"
+    force_stop: "{{ item.force_stop | default(omit) }}"
+    ignore_volatile_options: "{{ item.ignore_volatile_options | default(omit) }}"
     name: "{{ item.name }}"
-    state: "{{ item.state }}"
-    source:
-      type: image
-      server: "{{ item.server }}"
-      alias: "{{ item.alias }}"
-      architecture: "{{ item.architecture }}"
-    devices:
-      root:
-        path: /
-        type: "{{ item.disk_type }}"
-        size: "{{ item.disk_size }}"
-        pool: "{{ item.storage_pool }}"
-      eth0:
-        type: "{{ item.netdevice_type }}"
-        nictype: "{{ item.nictype }}"
-        parent: "{{ item.network }}"
-        ipv4.address: "{{ item.ipv4address }}"
-    profiles: "{{ item.profile }}"
-    wait_for_ipv4_addresses: "{{ item.wait_for_ipv4_addresses }}"
-    timeout: "{{ item.timeout }}"
-  loop: "{{ LXD_CNTNRS }}"
+    profiles: "{{ item.profiles | default(omit) }}"
+    project: "{{ item.project | default(omit) }}"
+    snap_url: "{{ item.snap_url | default(omit) }}"
+    source: "{{ item.source }}"
+    state: "{{ item.state | default('started') }}"
+    target: "{{ item.target | default(omit) }}"
+    timeout: "{{ item.timeout | default(omit) }}"
+    trust_password: "{{ item.trust_password | default(omit) }}"
+    type: "{{ item.type | default('container') }}"
+    url: "{{ item.url | default(omit) }}"
+    wait_for_container: "{{ item.wait_for_container | default(omit) }}"
+    wait_for_ipv4_addresses: "{{ item.wait_for_ipv4_addresses | default(omit) }}"
+  loop: "{{ libvirt_lxd_hosts }}"
+  tags: lxd_vms

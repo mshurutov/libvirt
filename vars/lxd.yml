@@ -1,0 +1,61 @@
+---
+
+# set any variables for LXD part of libvirt role
+lxd_config: "{{
+  lxd_config_defaults | 
+  ansible.builtin.combine(
+    lxd_config_group_all | default({}),
+    lxd_config_group     | default({}),
+    lxd_config_host      | default({}),
+    recursive=true
+  )
+}}"
+lxd_storage_pools: "{{
+  [ lxd_storage_pools_defaults,
+    lxd_storage_pools_group_all | default([]),
+    lxd_storage_pools_group     | default([]),
+    lxd_storage_pools_host      | default([])
+  ] |
+  community.general.lists_mergeby(
+    'name',
+    list_merge='append_rp',
+    recursive=true
+  )
+}}"
+lxd_networks: "{{
+  [ lxd_networks_defaults,
+    lxd_networks_group_all | default([]),
+    lxd_networks_group     | default([]),
+    lxd_networks_host      | default([])
+  ] |
+  community.general.lists_mergeby(
+    'name',
+    list_merge='append_rp',
+    recursive=true
+  )
+}}"
+lxd_profiles: "{{
+  [ lxd_profiles_defaults | default([]),
+    lxd_profiles_group_all | default([]),
+    lxd_profiles_group     | default([]),
+    lxd_profiles_host      | default([])
+  ] |
+  community.general.lists_mergeby(
+    'name',
+    list_merge='append_rp',
+    recursive=true
+  )
+}}"
+lxd_projects: "{{
+  [ lxd_projects_defaults | default([]),
+    lxd_projects_group_all | default([]),
+    lxd_projects_group     | default([]),
+    lxd_projects_host      | default([])
+  ] |
+  community.general.lists_mergeby(
+    'name',
+    list_merge='append_rp',
+    recursive=true
+  )
+}}"
+

@@ -4,13 +4,20 @@
   include_tasks: "{{ ansible_pkg_mgr }}.yml"
   tags: libvirt_install
 
-- name: create VMs
+- name: create libvirt defined VMs
   community.libvirt.virt:
     command: define
     xml: "{{ lookup('template', 'vm-template.xml.j2') }}"
     autostart: "{{ vm.autostart | default(false) }}" 
     state: "{{ vm.state | default(shutdown) }}"
-  loop: "{{ libvirt_vms }}"
+  loop: "{{ libvirt_libvirt_vms }}"
   loop_control:
     loop_var: vm
-  tags: libvirt_define
+  when: libvirt_libvirt_vms is defined and libvirt_libvirt_vms | length > 0
+  tags: libvirt_define,libvirt_libvirt_vms
+
+- name: create lxd defined VMs/containers
+  ansible.builtin.import_tasks: lxd.yml
+  when: libvirt_lxd_hosts is defined and libvirt_lxd_hosts | length > 0
+  tags: libvirt_define,libvirt_lxd_vms
+
