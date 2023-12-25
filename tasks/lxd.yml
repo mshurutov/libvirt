@@ -14,17 +14,7 @@
 #    - "projects: {{ lxd_projects }}"
 
 - name: init LXD service
-  block:
-    - name: execute lxd init
-      ansible.builtin.command: lxd init --minimal
-    - name: create LXD storage pools
-      ansible.builtin.command: "lxc storage create {{ item.pool_name }} {{ item.pool_type }} {{ item.pool_options }}"
-      when: lxd_stotage_pools is defined
-      loop: "{{ lxd_stotage_pools }}"
-    - name: create LXD networks
-      ansible.builtin.command: "lxc storage create {{ item.pool_name }} {{ item.pool_type }} {{ item.pool_options }}"
-      when: lxd_stotage_pools is defined
-      loop: "{{ lxd_stotage_pools }}"
+  ansible.builtin.command: lxd init --minimal
   when: lxd_init_force is defined and lxd_init_force | bool
   tags: lxd_init
 

@@ -1,9 +1,5 @@
 ---
 
-- name: install package for virtualisation
-  include_tasks: "{{ ansible_pkg_mgr }}.yml"
-  tags: libvirt_install
-
 - name: create libvirt defined VMs
   community.libvirt.virt:
     command: define
@@ -21,3 +17,7 @@
   when: libvirt_lxd_hosts is defined and libvirt_lxd_hosts | length > 0
   tags: libvirt_define,libvirt_lxd_vms
 
+- name: create proxmox VMs/containers if defined
+  ansible.builtin.import_tasks: proxmox.yml
+  when: libvirt_proxmox_hosts is defined and libvirt_proxmox_hosts | length > 0
+  tags: libvirt_define,libvirt_proxmox_vms

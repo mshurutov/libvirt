@@ -4,6 +4,7 @@
 # Common libvirt variables: any directory
 libvirt_templates_dir: "{{ role_path }}/templates"
 libvirt_vars_dir: "{{ role_path }}/vars"
+libvirt_files_dir: "{{ role_path }}/files"
 
 # Variables for LXD part
 lxd_port_listen: 8443
