@@ -18,15 +18,15 @@
   when: lxd_init_force is defined and lxd_init_force | bool
   tags: lxd_init
 
-- name: get lxc config
-  ansible.builtin.command: lxc config show --force-local
-  register: lxc_config_set
-  check_mode: off
-  tags: lxd_config
-- name: get lxc config from output
-  ansible.builtin.set_fact:
-    lxc_config_current: "{{ lxc_config_set.stdout | from_yaml }}"
-  tags: lxd_config
+#- name: get lxc config
+#  ansible.builtin.command: lxc config show --force-local
+#  register: lxc_config_set
+#  check_mode: off
+#  tags: lxd_config
+#- name: get lxc config from output
+#  ansible.builtin.set_fact:
+#    lxc_config_current: "{{ lxc_config_set.stdout | from_yaml }}"
+#  tags: lxd_config
 
 - name: set new lxd config parameters
   ansible.builtin.command: "lxc config set {{ item.key }}={{ item.value }}"
@@ -40,33 +40,49 @@
   when: item.value == 'unset'
   tags: lxd_config
 
-- name: get storage pools list into raw variable
-  ansible.builtin.command: "lxc storage list --force-local -f yaml"
-  register: lxc_storage_pools_list_raw
-  check_mode: off
-  tags: lxd_storage
-- name: get storage pools list from output of raw variable
-  ansible.builtin.set_fact:
-    lxc_storage_pools_list: "{{ lxc_storage_pools_list_raw.stdout | from_yaml }}"
-  tags: lxd_storage
+#- name: add auth by tokens
+#  ansible.builtin.command: lxc config trust add --name {{ item.name }}
+#  loop: "{{ lxd_clients }}"
+#  register: lxd_token
+#  when: lxd_create_tokens_force is defined and lxd_create_tokens_force | bool
+#  tags: lxd_config,lxd_remote_auth
+#- name: check if config dir exists
+#  ansible.builtin.file:
+#    path: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/lxc"
+#    state: directory
+#  delegate_to: 127.0.0.1
+#- name: store token in user config dir
+#  ansible.builtin.copy:
+#    content: "{{ lxd_token.stdout }}"
+#    dest: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/lxc/"
+#  delegate_to: 127.0.0.1
+#- name: get storage pools list into raw variable
+#  ansible.builtin.command: "lxc storage list --force-local -f yaml"
+#  register: lxc_storage_pools_list_raw
+#  check_mode: off
+#  tags: lxd_storage
+#- name: get storage pools list from output of raw variable
+#  ansible.builtin.set_fact:
+#    lxc_storage_pools_list: "{{ lxc_storage_pools_list_raw.stdout | from_yaml }}"
+#  tags: lxd_storage
 
-- name: get network list
-  ansible.builtin.command: "lxc network list --force-local -f yaml"
-  register: lxc_network_list_raw
-  check_mode: off
-  tags: lxd_network
-- name: get network from output of raw variable
-  ansible.builtin.set_fact:
-    lxc_network_list: "{{ lxc_network_list_raw.stdout | from_yaml }}"
-  check_mode: off
-  tags: lxd_network
+#- name: get network list
+#  ansible.builtin.command: "lxc network list --force-local -f yaml"
+#  register: lxc_network_list_raw
+#  check_mode: off
+#  tags: lxd_network
+#- name: get network from output of raw variable
+#  ansible.builtin.set_fact:
+#    lxc_network_list: "{{ lxc_network_list_raw.stdout | from_yaml }}"
+#  check_mode: off
+#  tags: lxd_network
 
-- name: show lxc_storage_pools_list variable
-  debug:
-    msg:
+#- name: show lxc_storage_pools_list variable
+#  debug:
+#    msg:
 #    - "storage pool: {{ lxc_storage_pools_list }}"
-    - "network: {{ lxc_network_list | to_yaml }}"
-  tags: lxd_network,lxd_storage
+#    - "network: {{ lxc_network_list | to_yaml }}"
+#  tags: lxd_network,lxd_storage
 
 #- name: create managed network
 #  ansible.builtin.command: "lxc network create {{ item.name }}"
