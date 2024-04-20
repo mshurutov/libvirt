@@ -2,108 +2,76 @@
 
 - name: set any variables
   ansible.builtin.include_vars: "{{ libvirt_vars_dir }}/lxd.yml"
-  tags: lxd_init,lxd_config,lxd_storage,lxd_network,lxd_profiles,lxd_projects,lxd_vms
-
-#- name: show any variables
-#  debug:
-#    msg:
-#    - "config: {{ lxd_config }}"
-#    - "storage pools: {{ lxd_storage_pools }}"
-#    - "networks: {{ lxd_networks }}"
-#    - "profiles: {{ lxd_profiles }}"
-#    - "projects: {{ lxd_projects }}"
+  tags: lxd_init,lxd_config,lxd_storage,lxd_networks,lxd_profiles,lxd_projects,lxd_vms
 
 - name: init LXD service
   ansible.builtin.command: lxd init --minimal
   when: lxd_init_force is defined and lxd_init_force | bool
   tags: lxd_init
 
-#- name: get lxc config
-#  ansible.builtin.command: lxc config show --force-local
-#  register: lxc_config_set
-#  check_mode: off
-#  tags: lxd_config
-#- name: get lxc config from output
-#  ansible.builtin.set_fact:
-#    lxc_config_current: "{{ lxc_config_set.stdout | from_yaml }}"
-#  tags: lxd_config
-
+# lxd_config was created from lxd_network, so it srored localy on the role
+# and it used by name only no Fully Qualified Collection Name (FQCN)
+- name: show lxd_config
+  debug:
+    msg: "{{ lxd_storage_pools }}"
+  tags: lxd_config
 - name: set new lxd config parameters
-  ansible.builtin.command: "lxc config set {{ item.key }}={{ item.value }}"
-  loop: "{{ lookup('ansible.builtin.dict', lxd_config , wantlist=True) }}"
-  when: item.value != 'unset'
+  lxd_config:
+    config: "{{ lxd_config }}"
   tags: lxd_config
 
-- name: unset lxd config parameters
-  ansible.builtin.command: "lxc config unset {{ item.key }}"
-  loop: "{{ lookup('ansible.builtin.dict', lxd_config , wantlist=True) }}"
-  when: item.value == 'unset'
-  tags: lxd_config
+# lxd_storage was created from lxd_network, so it srored localy on the role
+# and it used by name only no Fully Qualified Collection Name (FQCN)
+- name: storage pool settings
+  lxd_storage:
+    client_cert: "{{ lxd_client_cert | default(omit) }}"
+    client_key: "{{ lxd_client_key | default(omit) }}"
+    config: "{{ item.config }}"
+    description: "{{ item.description | default(omit)}}"
+    driver: "{{ item.driver | default('bridge') }}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    trust_password: "{{ item.trust_password | default(omit) }}"
+    url: "{{ item.url | default(omit) }}"
+  loop: "{{ lxd_storage_pools }}"
+  tags: lxd_storage
 
-#- name: add auth by tokens
-#  ansible.builtin.command: lxc config trust add --name {{ item.name }}
-#  loop: "{{ lxd_clients }}"
-#  register: lxd_token
-#  when: lxd_create_tokens_force is defined and lxd_create_tokens_force | bool
-#  tags: lxd_config,lxd_remote_auth
-#- name: check if config dir exists
-#  ansible.builtin.file:
-#    path: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/lxc"
-#    state: directory
-#  delegate_to: 127.0.0.1
-#- name: store token in user config dir
-#  ansible.builtin.copy:
-#    content: "{{ lxd_token.stdout }}"
-#    dest: "{{ lookup('ansible.builtin.env', 'HOME') }}/.config/lxc/"
-#  delegate_to: 127.0.0.1
-#- name: get storage pools list into raw variable
-#  ansible.builtin.command: "lxc storage list --force-local -f yaml"
-#  register: lxc_storage_pools_list_raw
-#  check_mode: off
-#  tags: lxd_storage
-#- name: get storage pools list from output of raw variable
-#  ansible.builtin.set_fact:
-#    lxc_storage_pools_list: "{{ lxc_storage_pools_list_raw.stdout | from_yaml }}"
-#  tags: lxd_storage
-
-#- name: get network list
-#  ansible.builtin.command: "lxc network list --force-local -f yaml"
-#  register: lxc_network_list_raw
-#  check_mode: off
-#  tags: lxd_network
-#- name: get network from output of raw variable
-#  ansible.builtin.set_fact:
-#    lxc_network_list: "{{ lxc_network_list_raw.stdout | from_yaml }}"
-#  check_mode: off
-#  tags: lxd_network
-
-#- name: show lxc_storage_pools_list variable
-#  debug:
-#    msg:
-#    - "storage pool: {{ lxc_storage_pools_list }}"
-#    - "network: {{ lxc_network_list | to_yaml }}"
-#  tags: lxd_network,lxd_storage
-
-#- name: create managed network
-#  ansible.builtin.command: "lxc network create {{ item.name }}"
-#  loop: "{{ lxd_networks }}"
-#  when: not item.name in lxc_network_list_raw.stdout
-#  tags: lxd_network
-#
-#- name: set network parameters
-#  ansible.builtin.command: "lxc network set {{ item.0.name }} {{ item.1.key }}={{ item.1.value }}"
-#  loop: "{{ lxd_networks | subelements('params') }}"
-#  when: item.1.value != 'unset'
-#  tags: lxd_network
- 
+# lxd_network is downloaded and stored onto local library directory
+# from https://github.com/Nani-o/ansible-role-lxd/blob/master/library/lxd_network.py
+# and it used by name only no Fully Qualified Collection Name (FQCN)
+# follow this module was edited by Mikhail Shurutov
+- name: network settings
+  lxd_network:
+    client_cert: "{{ lxd_client_cert | default(omit) }}"
+    client_key: "{{ lxd_client_key | default(omit) }}"
+    config: "{{ item.config }}"
+    description: "{{ item.description | default(omit)}}"
+    name: "{{ item.name }}"
+    state: "{{ item.state | default('present') }}"
+    trust_password: "{{ item.trust_password | default(omit) }}"
+    type: "{{ item.type | default('bridge') }}"
+    url: "{{ item.url | default(omit) }}"
+  loop: "{{ lxd_networks }}"
+  tags: lxd_networks
+  
+# Renaming network in same task with change other setting was failed
+# so rename is in separate task
+- name: rename network
+  lxd_network:
+    name: "{{ item.name }}"
+    new_name: "{{ item.new_name }}"
+  loop: "{{ lxd_networks }}"
+  when: item.new_name is defined and lxd_network_rename_force is defined and lxd_network_rename_force | bool
+  tags: lxd_networks_rename
+  
 - name: set lxd profiles
   community.general.lxd_profile:
-    client_cert: "{{ item.client_cert | default(omit) }}"
-    client_key: "{{ item.client_key | default(omit) }}"
+    client_cert: "{{ lxd_client_cert | default(omit) }}"
+    client_key: "{{ lxd_client_key | default(omit) }}"
     config: "{{ item.config | default(omit) }}"
     description: "{{ item.description | default(omit) }}"
     devices: "{{ item.devices | default(omit) }}"
-    merge_profile: "{{ item.merge_profile | default(omit) }}"
+    merge_profile: "{{ true if lxd_profiles_merge is defined and ( lxd_profiles_merge | bool ) else false }}"
     name: "{{ item.name }}"
     new_name: "{{ item.new_name | default(omit) }}"
     project: "{{ item.project | default(omit) }}"
@@ -111,7 +79,7 @@
     state: "{{ item.state | default('present') }}"
     trust_password: "{{ item.trust_password | default(omit) }}"
     url: "{{ item.url | default(omit) }}"
-  when: lxd_profiles is defined
+  when: lxd_profiles is defined and lxd_profiles | length > 0
   loop: "{{ lxd_profiles }}"
   tags: lxd_profiles
 
@@ -157,3 +125,14 @@
     wait_for_ipv4_addresses: "{{ item.wait_for_ipv4_addresses | default(omit) }}"
   loop: "{{ libvirt_lxd_hosts }}"
   tags: lxd_vms
+
+- name: install python3 on debian based distro
+  ansible.builtin.shell: "lxc exec {{ item.name }} -- apt install -y python3"
+  loop: "{{ libvirt_lxd_hosts }}"
+  when: item.source.alias | lower is regex('debian')
+  tags: lxd_vm_python
+- name: set python as link to python3
+  ansible.builtin.shell: "lxc exec {{ item.name }} -- update-alternatives --install /usr/bin/python python /usr/bin/python3 3"
+  loop: "{{ libvirt_lxd_hosts }}"
+  when: item.source.alias | lower is not regex('gentoo')
+  tags: lxd_vm_python

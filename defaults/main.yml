@@ -16,20 +16,20 @@ lxd_storage_pools_defaults:
     driver: "dir"
     config:
       source: "/var/lib/lxd/storage-pools"
-lxd_networks_defaults:
-  - name: "lxd_network"
-    params:
-      - type: "bridge"
-      - ipv4.address: "auto"
-      - ipv6.address: "none"
-#lxd_projects_defaults:
+lxd_networks_defaults: []
+#  - name: "lxd_network"
+#    config:
+#      - type: "bridge"
+#      - ipv4.address: "auto"
+#      - ipv6.address: "none"
+lxd_projects_defaults: []
 #  - name: "default"
 #    devices:
 #      root:
 #        path: "/"
 #        pool: "default"
 #        type: "disk"
-#lxd_profiles_defaults:
+lxd_profiles_defaults: []
 #  - name: "default"
 #    devices:
 #      root:

@@ -1,5 +1,13 @@
 ---
 
+- name: edit /etc/subuid file
+  ansible.builtin.template:
+    dest: "{{ item.path }}"
+    src: "{{ libvirt_templates_dir }}/subids.j2"
+  loop: "{{ lxd_subids }}"
+  when: lxd_subids is defined and lxd_subids | length > 0
+  tags: libvirt_define,subids
+
 - name: create libvirt defined VMs
   community.libvirt.virt:
     command: define

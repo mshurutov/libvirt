@@ -16,62 +16,68 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 DOCUMENTATION = '''
 ---
 module: lxd_storage
-short_description: Manage LXD networks
-version_added: "2.5"
+short_description: Manage LXD storage pools
+version_added: "2.15"
 description:
-  - Management of LXD networks
-author: "Sofiane Medjkoune"
+  - Management of LXD storage pools
+author: "Michail Shurutov"
 options:
-    name:
+    client_cert:
         description:
-          - Name of a network.
-        required: true
-    description:
-        description:
-          - Description of a network.
+          - The client certificate file path.
         required: false
+        default: '"{}/.config/lxc/client.crt" .format(os.environ["HOME"])'
+        aliases: [ cert_file ]
+    client_key:
+        description:
+          - The client certificate key file path.
+        required: false
+        default: '"{}/.config/lxc/client.key" .format(os.environ["HOME"])'
+        aliases: [ key_file ]
     config:
         description:
-          - 'The config for the network (e.g. {"ipv4.address": "172.29.0.1"}).
+          - 'The config for the storage pool (e.g.
+            {
+                "lvm.thinpool_name": "lxdltp",
+                "lvm.vg.force_reuse": "yes",
+                "lvm.vg_name": "vg",
+                source": "vg"
+            } for LVM thin pool based storage).
             See U(https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-11)'
-          - If the network already exists and its "config" value in metadata
+          - If the storage pool already exists and its "config" value in metadata
             obtained from
-            GET /1.0/networks/<name>
+            GET /1.0/storage-pools/<name>
             U(https://github.com/lxc/lxd/blob/master/doc/rest-api.md#get-16)
             are different, then this module tries to apply the configurations.
-          - If either ipv4.address or ipv6.address are not set in the config
-            a value of none will be defaulted.
         required: false
-        default: {'ipv4.address': none, 'ipv6.address': none}
-    new_name:
+    description:
         description:
-          - A new name of a network.
-          - If this parameter is specified a network will be renamed to this name.
-            See U(https://github.com/lxc/lxd/blob/master/doc/rest-api.md#post-12)
+          - Description of a storage.
         required: false
+    driver:
+        description:
+          - LXD store images, instances and custom volumes on storage pool.
+            Every storage pool should use one of follow drivers:
+            - 'Btrfs - btrfs'
+            - 'CephFS - cephfs'
+            - 'Ceph Object - cephobject'
+            - 'Ceph RBD - ceph'
+            - 'Directory - dir'
+            - 'LVM - lvm'
+            - 'ZFS - zfs'
+        required: true
+    name:
+        description:
+          - Name of storage pool.
+        required: true
     state:
         choices:
           - present
           - absent
         description:
-          - Define the state of a network.
+          - Define the state of a storage pool.
         required: false
         default: present
-    url:
-        description:
-          - The unix domain socket path or the https URL for the LXD server.
-        required: false
-        default: unix:/var/lib/lxd/unix.socket
-    key_file:
-        description:
-          - The client certificate key file path.
-        required: false
-        default: '"{}/.config/lxc/client.key" .format(os.environ["HOME"])'
-    cert_file:
-        description:
-          - The client certificate file path.
-        required: false
-        default: '"{}/.config/lxc/client.crt" .format(os.environ["HOME"])'
     trust_password:
         description:
           - The client trusted password.
@@ -82,69 +88,65 @@ options:
           - If trust_password is set, this module send a request for
             authentication before sending any requests.
         required: false
+    url:
+        description:
+          - The unix domain socket path or the https URL for the LXD server.
+        required: false
+        default: unix:/var/lib/lxd/unix.socket
 notes:
-  - Networks must have a unique name. If you attempt to create a network
-    with a name that already existed in the users namespace the module will
-    simply return as "unchanged".
+  - Storage pool must have a unique name. If you attempt to create a
+    storage pool with a name that already existed in the users namespace
+    the module will simply return as "unchanged".
 '''
 
 EXAMPLES = '''
-# An example for creating a network
+# An example for creating a storage pools
 - hosts: localhost
   connection: local
   tasks:
-    - name: Create a network
+    - name: Create a storage pools
       lxd_storage:
-        name: lxdbr0
+        name: lvm
+        driver: lvm
         state: present
         config:
-          ipv4.address: none
-          ipv6.address: 2001:470:b368:4242::1/64
-          ipv6.nat: "true"
-        description: My network
+          lvm.thinpool_name: lxdltp
+          lvm.vg.force_reuse: yes
+          lvm.vg_name: vg
+          source: vg
+        description: LVM storage pool
 
-# An example for creating a network via http connection
+# An example for creating a storage pool via https connection
 - hosts: localhost
   connection: local
   tasks:
-  - name: create lxdbr0 bridge
+  - name: create dir storage via remote connection
     lxd_storage:
       url: https://127.0.0.1:8443
-      # These cert_file and key_file values are equal to the default values.
-      #cert_file: "{{ lookup('env', 'HOME') }}/.config/lxc/client.crt"
-      #key_file: "{{ lookup('env', 'HOME') }}/.config/lxc/client.key"
+      # These client_cert and client_key values are equal to the default values.
+      #client_cert: "{{ lookup('env', 'HOME') }}/.config/lxc/client.crt"
+      #client_key: "{{ lookup('env', 'HOME') }}/.config/lxc/client.key"
       trust_password: mypassword
-      name: lxdbr0
+      name: dir_pool
+      driver: dir
       state: present
       config:
-        bridge.driver: openvswitch
-        ipv4.address: 10.0.3.1/24
-        ipv6.address: fd1:6997:4939:495d::1/64
-      description: My network
+        source: /opt/lxd/pools/dir_pool
+      description: My directory storage pool
 
-# An example for deleting a network
+# An example for deleting a btrfs storage pool
 - hosts: localhost
   connection: local
   tasks:
-    - name: Delete a network
+    - name: Delete a storage pool
       lxd_storage:
-        name: lxdbr0
+        name: lxdbtrfs
         state: absent
-
-# An example for renaming a network
-- hosts: localhost
-  connection: local
-  tasks:
-    - name: Rename a network
-      lxd_storage:
-        name: lxdbr0
-        new_name: lxdbr1
-        state: present
 '''
 
 RETURN = '''
 old_state:
-  description: The old state of the network
+  description: The old state of the storage pool
   returned: success
   type: string
   sample: "absent"
@@ -154,7 +156,7 @@ logs:
   type: list
   sample: "(too long to be placed here)"
 actions:
-  description: List of actions performed for the network.
+  description: List of actions performed for the storage pool.
   returned: success
   type: list
   sample: '["create"]'
@@ -166,24 +168,21 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.lxd import LXDClient, LXDClientException
 
 
-# NETWORKS_STATES is a list for states supported.
-NETWORKS_STATES = [
+# STORAGES_STATES is a list for states supported.
+STORAGES_STATES = [
     'present', 'absent'
 ]
 
-# CONFIG_PARAMS is a list of config attribute names.
-CONFIG_PARAMS = [
-    'config', 'description'
+# STORAGES_CONFIG_PARAMS is a list of config attribute names.
+STORAGES_CONFIG_PARAMS = [
+    'config', 'description', 'driver'
 ]
 
-# NETWORKS_CONFIG_DEFAULTS is the default config deployed.
-NETWORKS_CONFIG_DEFAULTS = {
-    'ipv4.address': 'none',
-    'ipv6.address': 'none'
-}
+# STORAGES_CONFIG_DEFAULTS is the default config deployed.
+STORAGES_CONFIG_DEFAULTS = {}
 
 
-class LXDNetworkManagement(object):
+class LXDStorageManagement(object):
     def __init__(self, module):
         """Management of LXC containers via Ansible.
 
@@ -191,14 +190,14 @@ class LXDNetworkManagement(object):
         :type module: ``object``
         """
         self.module = module
-        self.name = self.module.params['name']
+        self.cert_file = self.module.params.get('client_cert', None)
+        self.key_file = self.module.params.get('client_key', None)
         self._build_config()
+        self.driver = self.module.params['driver']
+        self.name = self.module.params['name']
         self.state = self.module.params['state']
-        self.new_name = self.module.params.get('new_name', None)
-
+        self.trust_password = self.module.params.get('trust_password', None)
         self.url = self.module.params['url']
-        self.key_file = self.module.params.get('key_file', None)
-        self.cert_file = self.module.params.get('cert_file', None)
         self.debug = self.module._verbosity >= 4
         try:
             self.client = LXDClient(
@@ -207,24 +206,23 @@ class LXDNetworkManagement(object):
             )
         except LXDClientException as e:
             self.module.fail_json(msg=e.msg)
-        self.trust_password = self.module.params.get('trust_password', None)
         self.actions = []
 
     def _build_config(self):
         self.config = {}
-        for attr in CONFIG_PARAMS:
+        for attr in STORAGES_CONFIG_PARAMS:
             param_val = self.module.params.get(attr, None)
             if attr == 'config':
                 if param_val is None:
                     param_val = {}
-                NETWORKS_CONFIG_DEFAULTS.update(param_val)
-                param_val = NETWORKS_CONFIG_DEFAULTS
+                STORAGES_CONFIG_DEFAULTS.update(param_val)
+                param_val = STORAGES_CONFIG_DEFAULTS
             if param_val is not None:
                 self.config[attr] = param_val
 
     def _get_storage_json(self):
         return self.client.do(
-            'GET', '/1.0/networks/{0}'.format(self.name),
+            'GET', '/1.0/storage-pools/{0}'.format(self.name),
             ok_error_codes=[404]
         )
 
@@ -237,37 +235,19 @@ class LXDNetworkManagement(object):
     def _update_storage(self):
         if self.state == 'present':
             if self.old_state == 'absent':
-                if self.new_name is None:
-                    self._create_storage()
-                else:
-                    self.module.fail_json(
-                        msg='new_name must not be set when the network does not exist and the specified state is present',
-                        changed=False)
+                self._create_storage()
             else:
-                if self.new_name is not None and self.new_name != self.name:
-                    self._rename_storage()
                 if self._needs_to_apply_storage_configs():
                     self._apply_storage_configs()
         elif self.state == 'absent':
             if self.old_state == 'present':
-                if self.new_name is None:
-                    self._delete_storage()
-                else:
-                    self.module.fail_json(
-                        msg='new_name must not be set when the network exists and the specified state is absent',
-                        changed=False)
+                self._delete_storage()
 
     def _create_storage(self):
         config = self.config.copy()
         config['name'] = self.name
-        self.client.do('POST', '/1.0/networks', config)
+        self.client.do('POST', '/1.0/storage-pools', config)
         self.actions.append('create')
-
-    def _rename_storage(self):
-        config = {'name': self.new_name}
-        self.client.do('POST', '/1.0/networks/{}'.format(self.name), config)
-        self.actions.append('rename')
-        self.name = self.new_name
 
     def _needs_to_change_storage_config(self, key):
         if key not in self.config:
@@ -285,11 +265,11 @@ class LXDNetworkManagement(object):
         config = self.old_storage_json.copy()
         for k, v in self.config.items():
             config[k] = v
-        self.client.do('PUT', '/1.0/networks/{}'.format(self.name), config)
+        self.client.do('PUT', '/1.0/storage-pools/{}'.format(self.name), config)
         self.actions.append('apply_storage_configs')
 
     def _delete_storage(self):
-        self.client.do('DELETE', '/1.0/networks/{}'.format(self.name))
+        self.client.do('DELETE', '/1.0/storage-pools/{}'.format(self.name))
         self.actions.append('delete')
 
     def run(self):
@@ -330,12 +310,15 @@ def main():
 
     module = AnsibleModule(
         argument_spec=dict(
-            name=dict(
+            client_cert=dict(
                 type='str',
-                required=True
+                default='{}/.config/lxc/client.crt'.format(os.environ['HOME']),
+                aliases=['cert_file']
             ),
-            new_name=dict(
+            client_key=dict(
                 type='str',
+                default='{}/.config/lxc/client.key'.format(os.environ['HOME']),
+                aliases=['key_file']
             ),
             config=dict(
                 type='dict',
@@ -343,28 +326,31 @@ def main():
             description=dict(
                 type='str',
             ),
+            driver=dict(
+                type='str',
+                required=True
+            ),
+            name=dict(
+                type='str',
+                required=True
+            ),
             state=dict(
-                choices=NETWORKS_STATES,
+                choices=STORAGES_STATES,
                 default='present'
+            ),
+            trust_password=dict(
+                type='str',
+                no_log=True
             ),
             url=dict(
                 type='str',
                 default='unix:/var/lib/lxd/unix.socket'
-            ),
-            key_file=dict(
-                type='str',
-                default='{}/.config/lxc/client.key'.format(os.environ['HOME'])
-            ),
-            cert_file=dict(
-                type='str',
-                default='{}/.config/lxc/client.crt'.format(os.environ['HOME'])
-            ),
-            trust_password=dict(type='str', no_log=True)
+            )
         ),
-        supports_check_mode=False,
+        supports_check_mode=True,
     )
 
-    lxd_manage = LXDNetworkManagement(module=module)
+    lxd_manage = LXDStorageManagement(module=module)
     lxd_manage.run()
 
 
