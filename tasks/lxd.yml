@@ -115,7 +115,7 @@
     project: "{{ item.project | default(omit) }}"
     snap_url: "{{ item.snap_url | default(omit) }}"
     source: "{{ item.source }}"
-    state: "{{ item.state | default('started') }}"
+    state: "{{ item.state | default('stopped') }}"
     target: "{{ item.target | default(omit) }}"
     timeout: "{{ item.timeout | default(omit) }}"
     trust_password: "{{ item.trust_password | default(omit) }}"
@@ -126,13 +126,38 @@
   loop: "{{ libvirt_lxd_hosts }}"
   tags: lxd_vms
 
+# Install python
+# on Debian Linux
 - name: install python3 on debian based distro
   ansible.builtin.shell: "lxc exec {{ item.name }} -- apt install -y python3"
   loop: "{{ libvirt_lxd_hosts }}"
   when: item.source.alias | lower is regex('debian')
   tags: lxd_vm_python
+# on Alt Linux
+- name: install python3 on Alt Linux distro
+  ansible.builtin.shell: "lxc exec {{ item.name }} -- apt-get install -y python3"
+  loop: "{{ libvirt_lxd_hosts }}"
+  when: item.source.alias | lower is regex('alt')
+  tags: lxd_vm_python
+
+# Set python interpreter
+# On many distros
 - name: set python as link to python3
   ansible.builtin.shell: "lxc exec {{ item.name }} -- update-alternatives --install /usr/bin/python python /usr/bin/python3 3"
   loop: "{{ libvirt_lxd_hosts }}"
-  when: item.source.alias | lower is not regex('gentoo')
+  when: item.source.alias | lower is not regex('gentoo|alt')
+  tags: lxd_vm_python
+# On Alt Linux
+- name: set python interpeter
+  block:
+  - name: edit alternative file
+    ansible.builtin.shell: lxc exec {{ item.name }} -- bash -c 'echo -e "/usr/bin/python\t/usr/bin/python3\t200" > /etc/alternatives/packages.d/python'
+    loop: "{{ libvirt_lxd_hosts }}"
+  - name: validate alternative file
+    ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-validate
+    loop: "{{ libvirt_lxd_hosts }}"
+  - name: apply new alternative
+    ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-update
+    loop: "{{ libvirt_lxd_hosts }}"
+  when: item.source.alias | lower is regex('alt')
   tags: lxd_vm_python
