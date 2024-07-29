@@ -1,5 +1,4 @@
 ---
-
 - name: enable lxd
   service:
     name: lxd
@@ -29,3 +28,18 @@
   service:
     name: lxd
     state: stopped
+
+- name: enable lxd-dns
+  service:
+    name: lxd-dns-{{ lxd_network_bridge }}
+    enabled: yes
+
+- name: start lxd-dns
+  service:
+    name: lxd-dns-{{ lxd_network_bridge }}
+    state: started
+
+- name: restart lxd-dns
+  service:
+    name: lxd-dns-{{ lxd_network_bridge }}
+    state: restarted

@@ -53,7 +53,17 @@
     url: "{{ item.url | default(omit) }}"
   loop: "{{ lxd_networks }}"
   tags: lxd_networks
-  
+
+- name: create unit file for dns
+  ansible.builtin.template:
+    dest: "/etc/systemd/system/lxd-dns-{{ lxd_network_bridge }}.service"
+    src: "{{ libvirt_templates_dir }}/lxd-dns.service.j2"
+  notify:
+  - enable lxd-dns
+  - start lxd-dns
+  when: lxd_dns_enable is defined and lxd_dns_enable | bool
+  tags: lxd_networks,lxd_dns
+
 # Renaming network in same task with change other setting was failed
 # so rename is in separate task
 - name: rename network

@@ -1,0 +1,14 @@
+[Unit]
+Description=LXD per-link DNS configuration for {{ lxd_network_bridge }}
+BindsTo=sys-subsystem-net-devices-{{ lxd_network_bridge }}.device
+After=sys-subsystem-net-devices-{{ lxd_network_bridge }}.device
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/resolvectl dns {{ lxd_network_bridge }} {{ lxd_dns_server }}
+ExecStart=/usr/bin/resolvectl domain {{ lxd_network_bridge }} {{ lxd_dns_domain }}
+ExecStopPost=/usr/bin/resolvectl revert {{ lxd_network_bridge }}
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sys-subsystem-net-devices-{{ lxd_network_bridge }}.device
