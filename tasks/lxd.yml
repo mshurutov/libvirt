@@ -134,29 +134,30 @@
     wait_for_container: "{{ item.wait_for_container | default(omit) }}"
     wait_for_ipv4_addresses: "{{ item.wait_for_ipv4_addresses | default(omit) }}"
   loop: "{{ libvirt_lxd_hosts }}"
-  tags: lxd_vms
+  when: work_host is not defined or work_host == item.name
+  tags: lxd_vms,lxd_vms_install
 
 # Install python
 # on Debian Linux
 - name: install python3 on debian based distro
   ansible.builtin.shell: "lxc exec {{ item.name }} -- apt install -y python3"
   loop: "{{ libvirt_lxd_hosts }}"
-  when: item.source.alias | lower is regex('debian')
-  tags: lxd_vm_python
+  when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('debian')
+  tags: lxd_vms,lxd_vm_python
 # on Alt Linux
 - name: install python3 on Alt Linux distro
   ansible.builtin.shell: "lxc exec {{ item.name }} -- apt-get install -y python3"
   loop: "{{ libvirt_lxd_hosts }}"
-  when: item.source.alias | lower is regex('alt')
-  tags: lxd_vm_python
+  when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('alt')
+  tags: lxd_vms,lxd_vm_python
 
 # Set python interpreter
 # On many distros
 - name: set python as link to python3
   ansible.builtin.shell: "lxc exec {{ item.name }} -- update-alternatives --install /usr/bin/python python /usr/bin/python3 3"
   loop: "{{ libvirt_lxd_hosts }}"
-  when: item.source.alias | lower is not regex('gentoo|alt')
-  tags: lxd_vm_python
+  when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is not regex('gentoo|alt')
+  tags: lxd_vms,lxd_vm_python
 # On Alt Linux
 - name: set python interpeter
   block:
@@ -169,5 +170,5 @@
   - name: apply new alternative
     ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-update
     loop: "{{ libvirt_lxd_hosts }}"
-  when: item.source.alias | lower is regex('alt')
-  tags: lxd_vm_python
+  when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('alt')
+  tags: lxd_vms,lxd_vm_python
