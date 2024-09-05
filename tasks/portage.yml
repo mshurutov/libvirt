@@ -1,6 +1,5 @@
 ---
-
-- name: install LXD on Gentoo Linux
+- name: Install LXD on Gentoo Linux
   portage:
     package: "{{ libvirt_packages }}"
     state: present
@@ -8,7 +7,7 @@
   notify:
     - enable lxd
 
-- name: start lxd service after installation
+- name: Start lxd service after installation
   service:
     name: lxd
     state: started

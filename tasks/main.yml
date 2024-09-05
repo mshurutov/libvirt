@@ -1,6 +1,15 @@
 ---
+- name: Check if ansible version is equal or greater than 2.11
+  ansible.builtin.fail:
+    msg: "Ansible core should be equal or greater than 2.11"
+  when: ansible_version.full is ansible.builtin.version('2.11','<')
 
-- name: edit /etc/subuid file
+- name: Check if python is equal or greater than 3
+  ansible.builtin.fail:
+    msg: "Python should be equal or greater than 3"
+  when: ansible_python.version.major is ansible.builtin.version('3','<')
+
+- name: Edit /etc/subuid file
   ansible.builtin.template:
     dest: "{{ item.path }}"
     src: "{{ libvirt_templates_dir }}/subids.j2"
@@ -8,7 +17,7 @@
   when: lxd_subids is defined and lxd_subids | length > 0
   tags: libvirt_define,subids
 
-- name: create libvirt defined VMs
+- name: Create libvirt defined VMs
   community.libvirt.virt:
     command: define
     xml: "{{ lookup('template', 'vm-template.xml.j2') }}"
@@ -20,12 +29,12 @@
   when: libvirt_libvirt_vms is defined and libvirt_libvirt_vms | length > 0
   tags: libvirt_define,libvirt_libvirt_vms
 
-- name: create lxd defined VMs/containers
+- name: Create lxd defined VMs/containers
   ansible.builtin.import_tasks: lxd.yml
   when: libvirt_lxd_hosts is defined and libvirt_lxd_hosts | length > 0
   tags: libvirt_define,libvirt_lxd_vms
 
-- name: create proxmox VMs/containers if defined
+- name: Create proxmox VMs/containers if defined
   ansible.builtin.import_tasks: proxmox.yml
   when: libvirt_proxmox_hosts is defined and libvirt_proxmox_hosts | length > 0
   tags: libvirt_define,libvirt_proxmox_vms

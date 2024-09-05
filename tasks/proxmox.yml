@@ -1,38 +1,37 @@
 ---
-
 # Install VMs/containers on proxmox host/cluster
 # install proxmox packages on Debian
-- name: check if distr is Debian
+- name: Check if distr is Debian
   debug:
     msg: "Distr is {{ ansible_distribution }}, not Debian"
   when: ansible_distribution != 'Debian'
   failed_when: ansible_distribution != 'Debian'
 
-- name: install proxmox packages on Debian
+- name: Install proxmox packages on Debian
   block:
-  - name: add gpg key into system
+  - name: Add gpg key into system
     ansible.builtin.apt_key:
       url: "{{ proxmox_apt_repos.gpg }}"
       state: "present"
     tags: proxmox,proxmox_install
-  - name: add proxmox repos
+  - name: Add proxmox repos
     ansible.builtin.apt_repository:
       repo: "{{ item }}"
       filename: "proxmox"
       state: "present"
     loop: "{{ proxmox_apt_repos.repos }}"
     tags: proxmox,proxmox_install
-  - name: upgrade system
+  - name: Upgrade system
     ansible.builtin.apt:
       update_cache: yes
       upgrade: dist
     tags: proxmox,proxmox_install
   #- name: remove orangepi-firmware on OrangePi
-  - name: install pve-qemu-kvm
+  - name: Install pve-qemu-kvm
     ansible.builtin.apt:
       name: "pve-qemu-kvm"
     tags: proxmox,proxmox_install
-  - name: install all pve packages
+  - name: Install all pve packages
     ansible.builtin.apt:
       name: "{{ proxmox_apt_packages }}"
     tags: proxmox,proxmox_install

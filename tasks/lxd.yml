@@ -1,28 +1,27 @@
 ---
-
-- name: set any variables
+- name: Set any variables
   ansible.builtin.include_vars: "{{ libvirt_vars_dir }}/lxd.yml"
   tags: lxd_init,lxd_config,lxd_storage,lxd_networks,lxd_profiles,lxd_projects,lxd_vms
 
-- name: init LXD service
+- name: Init LXD service
   ansible.builtin.command: lxd init --minimal
   when: lxd_init_force is defined and lxd_init_force | bool
   tags: lxd_init
 
 # lxd_config was created from lxd_network, so it srored localy on the role
 # and it used by name only no Fully Qualified Collection Name (FQCN)
-- name: show lxd_config
+- name: Show lxd_config
   debug:
     msg: "{{ lxd_storage_pools }}"
   tags: lxd_config
-- name: set new lxd config parameters
+- name: Set new lxd config parameters
   lxd_config:
     config: "{{ lxd_config }}"
   tags: lxd_config
 
 # lxd_storage was created from lxd_network, so it srored localy on the role
 # and it used by name only no Fully Qualified Collection Name (FQCN)
-- name: storage pool settings
+- name: Storage pool settings
   lxd_storage:
     client_cert: "{{ lxd_client_cert | default(omit) }}"
     client_key: "{{ lxd_client_key | default(omit) }}"
@@ -40,7 +39,7 @@
 # from https://github.com/Nani-o/ansible-role-lxd/blob/master/library/lxd_network.py
 # and it used by name only no Fully Qualified Collection Name (FQCN)
 # follow this module was edited by Mikhail Shurutov
-- name: network settings
+- name: Network settings
   lxd_network:
     client_cert: "{{ lxd_client_cert | default(omit) }}"
     client_key: "{{ lxd_client_key | default(omit) }}"
@@ -54,7 +53,7 @@
   loop: "{{ lxd_networks }}"
   tags: lxd_networks
 
-- name: create unit file for dns
+- name: Create unit file for dns
   ansible.builtin.template:
     dest: "/etc/systemd/system/lxd-dns-{{ lxd_network_bridge }}.service"
     src: "{{ libvirt_templates_dir }}/lxd-dns.service.j2"
@@ -66,7 +65,7 @@
 
 # Renaming network in same task with change other setting was failed
 # so rename is in separate task
-- name: rename network
+- name: Rename network
   lxd_network:
     name: "{{ item.name }}"
     new_name: "{{ item.new_name }}"
@@ -74,7 +73,7 @@
   when: item.new_name is defined and lxd_network_rename_force is defined and lxd_network_rename_force | bool
   tags: lxd_networks_rename
   
-- name: set lxd profiles
+- name: Set lxd profiles
   community.general.lxd_profile:
     client_cert: "{{ lxd_client_cert | default(omit) }}"
     client_key: "{{ lxd_client_key | default(omit) }}"
@@ -93,7 +92,7 @@
   loop: "{{ lxd_profiles }}"
   tags: lxd_profiles
 
-- name: set lxd projects
+- name: Set lxd projects
   community.general.lxd_project:
     client_cert: "{{ item.client_cert | default(omit) }}"
     client_key: "{{ item.client_key | default(omit) }}"
@@ -110,7 +109,7 @@
   loop: "{{ lxd_projects }}"
   tags: lxd_projects
 
-- name: create and start any containers
+- name: Create and start any containers
   community.general.lxd_container:
     architecture: "{{ item.architecture | default('x86_64') }}"
     client_cert: "{{ item.client_cert | default(omit) }}"
@@ -139,13 +138,13 @@
 
 # Install python
 # on Debian Linux
-- name: install python3 on debian based distro
+- name: Install python3 on debian based distro
   ansible.builtin.shell: "lxc exec {{ item.name }} -- apt install -y python3"
   loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('debian')
   tags: lxd_vms,lxd_vm_python
 # on Alt Linux
-- name: install python3 on Alt Linux distro
+- name: Install python3 on Alt Linux distro
   ansible.builtin.shell: "lxc exec {{ item.name }} -- apt-get install -y python3"
   loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('alt')
@@ -153,21 +152,21 @@
 
 # Set python interpreter
 # On many distros
-- name: set python as link to python3
+- name: Set python as link to python3
   ansible.builtin.shell: "lxc exec {{ item.name }} -- update-alternatives --install /usr/bin/python python /usr/bin/python3 3"
   loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is not regex('gentoo|alt')
   tags: lxd_vms,lxd_vm_python
 # On Alt Linux
-- name: set python interpeter
+- name: Set python interpeter
   block:
-  - name: edit alternative file
+  - name: Edit alternative file
     ansible.builtin.shell: lxc exec {{ item.name }} -- bash -c 'echo -e "/usr/bin/python\t/usr/bin/python3\t200" > /etc/alternatives/packages.d/python'
     loop: "{{ libvirt_lxd_hosts }}"
-  - name: validate alternative file
+  - name: Validate alternative file
     ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-validate
     loop: "{{ libvirt_lxd_hosts }}"
-  - name: apply new alternative
+  - name: Apply new alternative
     ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-update
     loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('alt')
