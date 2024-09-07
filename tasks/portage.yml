@@ -1,14 +1,14 @@
 ---
 - name: Install LXD on Gentoo Linux
-  portage:
+  community.general.portage:
     package: "{{ libvirt_packages }}"
     state: present
   tags: lxd_install
   notify:
-    - enable lxd
+    - Enable lxd
 
 - name: Start lxd service after installation
-  service:
+  ansible.builtin.service:
     name: lxd
     state: started
   tags: lxd_install,lxd_start

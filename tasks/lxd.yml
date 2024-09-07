@@ -5,13 +5,14 @@
 
 - name: Init LXD service
   ansible.builtin.command: lxd init --minimal
+  changed_when: true
   when: lxd_init_force is defined and lxd_init_force | bool
   tags: lxd_init
 
 # lxd_config was created from lxd_network, so it srored localy on the role
 # and it used by name only no Fully Qualified Collection Name (FQCN)
 - name: Show lxd_config
-  debug:
+  ansible.builtin.debug:
     msg: "{{ lxd_storage_pools }}"
   tags: lxd_config
 - name: Set new lxd config parameters
@@ -26,7 +27,7 @@
     client_cert: "{{ lxd_client_cert | default(omit) }}"
     client_key: "{{ lxd_client_key | default(omit) }}"
     config: "{{ item.config }}"
-    description: "{{ item.description | default(omit)}}"
+    description: "{{ item.description | default(omit) }}"
     driver: "{{ item.driver | default('bridge') }}"
     name: "{{ item.name }}"
     state: "{{ item.state | default('present') }}"
@@ -44,7 +45,7 @@
     client_cert: "{{ lxd_client_cert | default(omit) }}"
     client_key: "{{ lxd_client_key | default(omit) }}"
     config: "{{ item.config }}"
-    description: "{{ item.description | default(omit)}}"
+    description: "{{ item.description | default(omit) }}"
     name: "{{ item.name }}"
     state: "{{ item.state | default('present') }}"
     trust_password: "{{ item.trust_password | default(omit) }}"
@@ -57,9 +58,10 @@
   ansible.builtin.template:
     dest: "/etc/systemd/system/lxd-dns-{{ lxd_network_bridge }}.service"
     src: "{{ libvirt_templates_dir }}/lxd-dns.service.j2"
+    mode: "0644"
   notify:
-  - enable lxd-dns
-  - start lxd-dns
+    - Enable lxd-dns
+    - Start lxd-dns
   when: lxd_dns_enable is defined and lxd_dns_enable | bool
   tags: lxd_networks,lxd_dns
 
@@ -72,7 +74,7 @@
   loop: "{{ lxd_networks }}"
   when: item.new_name is defined and lxd_network_rename_force is defined and lxd_network_rename_force | bool
   tags: lxd_networks_rename
-  
+
 - name: Set lxd profiles
   community.general.lxd_profile:
     client_cert: "{{ lxd_client_cert | default(omit) }}"
@@ -80,7 +82,7 @@
     config: "{{ item.config | default(omit) }}"
     description: "{{ item.description | default(omit) }}"
     devices: "{{ item.devices | default(omit) }}"
-    merge_profile: "{{ true if lxd_profiles_merge is defined and ( lxd_profiles_merge | bool ) else false }}"
+    merge_profile: "{{ true if lxd_profiles_merge is defined and (lxd_profiles_merge | bool) else false }}"
     name: "{{ item.name }}"
     new_name: "{{ item.new_name | default(omit) }}"
     project: "{{ item.project | default(omit) }}"
@@ -139,13 +141,15 @@
 # Install python
 # on Debian Linux
 - name: Install python3 on debian based distro
-  ansible.builtin.shell: "lxc exec {{ item.name }} -- apt install -y python3"
+  ansible.builtin.command: "lxc exec {{ item.name }} -- apt install -y python3"
+  changed_when: true
   loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('debian')
   tags: lxd_vms,lxd_vm_python
 # on Alt Linux
 - name: Install python3 on Alt Linux distro
-  ansible.builtin.shell: "lxc exec {{ item.name }} -- apt-get install -y python3"
+  ansible.builtin.command: "lxc exec {{ item.name }} -- apt-get install -y python3"
+  changed_when: true
   loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('alt')
   tags: lxd_vms,lxd_vm_python
@@ -153,21 +157,25 @@
 # Set python interpreter
 # On many distros
 - name: Set python as link to python3
-  ansible.builtin.shell: "lxc exec {{ item.name }} -- update-alternatives --install /usr/bin/python python /usr/bin/python3 3"
+  ansible.builtin.command: "lxc exec {{ item.name }} -- update-alternatives --install /usr/bin/python python /usr/bin/python3 3"
+  changed_when: true
   loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is not regex('gentoo|alt')
   tags: lxd_vms,lxd_vm_python
 # On Alt Linux
 - name: Set python interpeter
-  block:
-  - name: Edit alternative file
-    ansible.builtin.shell: lxc exec {{ item.name }} -- bash -c 'echo -e "/usr/bin/python\t/usr/bin/python3\t200" > /etc/alternatives/packages.d/python'
-    loop: "{{ libvirt_lxd_hosts }}"
-  - name: Validate alternative file
-    ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-validate
-    loop: "{{ libvirt_lxd_hosts }}"
-  - name: Apply new alternative
-    ansible.builtin.shell: lxc exec {{ item.name }} -- alternatives-update
-    loop: "{{ libvirt_lxd_hosts }}"
   when: (work_host is not defined or work_host == item.name) and item.source.alias | lower is regex('alt')
   tags: lxd_vms,lxd_vm_python
+  block:
+    - name: Edit alternative file
+      ansible.builtin.shell: lxc exec {{ item.name }} -- bash -c 'echo -e "/usr/bin/python\t/usr/bin/python3\t200" > /etc/alternatives/packages.d/python'
+      changed_when: true
+      loop: "{{ libvirt_lxd_hosts }}"
+    - name: Validate alternative file
+      ansible.builtin.command: lxc exec {{ item.name }} -- alternatives-validate
+      changed_when: true
+      loop: "{{ libvirt_lxd_hosts }}"
+    - name: Apply new alternative
+      ansible.builtin.command: lxc exec {{ item.name }} -- alternatives-update
+      changed_when: true
+      loop: "{{ libvirt_lxd_hosts }}"

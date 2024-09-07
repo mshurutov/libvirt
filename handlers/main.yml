@@ -1,45 +1,45 @@
 ---
-- name: enable lxd
-  service:
+- name: Enable lxd
+  ansible.builtin.service:
     name: lxd
-    enabled: yes
-  
-- name: disable lxd
-  service:
+    enabled: true
+
+- name: Disable lxd
+  ansible.builtin.service:
     name: lxd
-    enabled: no
-  
-- name: start lxd
-  service:
+    enabled: false
+
+- name: Start lxd
+  ansible.builtin.service:
     name: lxd
     state: started
-  
-- name: restart lxd
-  service:
+
+- name: Restart lxd
+  ansible.builtin.service:
     name: lxd
     state: restarted
-  
-- name: reload lxd
-  service:
+
+- name: Reload lxd
+  ansible.builtin.service:
     name: lxd
     state: reloaded
-  
-- name: stop lxd
-  service:
+
+- name: Stop lxd
+  ansible.builtin.service:
     name: lxd
     state: stopped
 
-- name: enable lxd-dns
-  service:
+- name: Enable lxd-dns
+  ansible.builtin.service:
     name: lxd-dns-{{ lxd_network_bridge }}
-    enabled: yes
+    enabled: true
 
-- name: start lxd-dns
-  service:
+- name: Start lxd-dns
+  ansible.builtin.service:
     name: lxd-dns-{{ lxd_network_bridge }}
     state: started
 
-- name: restart lxd-dns
-  service:
+- name: Restart lxd-dns
+  ansible.builtin.service:
     name: lxd-dns-{{ lxd_network_bridge }}
     state: restarted

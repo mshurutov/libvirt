@@ -1,5 +1,4 @@
 ---
-
 # Default values for libvirt role
 # Common libvirt variables: any directory
 libvirt_templates_dir: "{{ role_path }}/templates"
